@@ -10,7 +10,7 @@ struct enet_header {
 	uint8_t dest_addr[LAN_addr_len];
 	uint8_t src_addr[LAN_addr_len];
 	uint16_t enet_type;
-}__attributes__((packed));
+}__attribute__((packed));
 
 // ARP header struct
 struct arp_header {
@@ -23,7 +23,7 @@ struct arp_header {
 	uint8_t src_ip[IP_addr_len];
 	uint8_t dest_mac[LAN_addr_len];
 	uint8_t dest_ip[IP_addr_len];
-}__attributes__((packed));
+}__attribute__((packed));
 
 // IP header struct
 struct IP_header {
@@ -37,7 +37,7 @@ struct IP_header {
 	uint16_t checksum;
 	uint8_t src_addr[IP_addr_len];
 	uint8_t dest_addr[IP_addr_len];
-}__attributes__((packed));
+}__attribute__((packed));
 
 // ICMP header struct
 struct ICMP_header {
@@ -46,7 +46,7 @@ struct ICMP_header {
 	uint16_t checksum;
 	uint16_t identifier;
 	uint16_t sequence_num;
-}__attributes__((packed));
+}__attribute__((packed));
 
 // TCP header struct
 struct TCP_header {
@@ -59,7 +59,7 @@ struct TCP_header {
 	uint16_t window_size;
 	uint16_t checksum;
 	uint16_t pointer;
-}__attributes__((packed));
+}__attribute__((packed));
 
 // UDP header struct
 struct UDP_header {
@@ -67,7 +67,7 @@ struct UDP_header {
 	uint16_t dest_port;
 	uint16_t length;
 	uint16_t checksum;
-}__attributes__((packed));
+}__attribute__((packed));
 
 
 
