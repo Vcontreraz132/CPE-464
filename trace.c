@@ -3,6 +3,12 @@
 #include "trace.h"
 #include <pcap.h>
 
+	void packet_parser(u_char *user_data, const struct pcap_pkthdr *header, const u_char *packet) {
+		(void)user_data;
+		printf("Packet length: %d bytes\n", header->len);
+
+	}
+
 	int main(int argc, char *argv[]) {
 
 		//check for correct command line argument
@@ -24,18 +30,16 @@
 			return 1;
 		}
 
-		struct pcap_pkthdr *header;
-		const u_char *packet;
+		// int ex_return = pcap_next_ex(handle, &header, &packet); // pcap_next_ex returns a value based on success or failure
+		// instead of pcap_next_ex, use pcap_loop to read all packets
+		int loop_return = pcap_loop(handle, -1, packet_parser, NULL);
 
-		int ex_return = pcap_next_ex(handle, &header, &packet); // pcap_next_ex returns a value based on success or failure
 
-		if(ex_return == -1) {
+		if(loop_return == -1) {
 			fprintf(stderr, "ERROR unable to read packet\n");
 			pcap_close(handle);
 			return 1;
 		}
-
-		printf("Packet length: %d bydes\n", header->len);
 
 		pcap_close(handle);
 		printf("Trace file closed\n");
