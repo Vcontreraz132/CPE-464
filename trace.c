@@ -3,10 +3,18 @@
 #include "trace.h"
 #include <pcap.h>
 
+	int packet_num = 0;
+
 	void packet_parser(u_char *user_data, const struct pcap_pkthdr *header, const u_char *packet) {
 		(void)user_data;
-		printf("Packet length: %d bytes\n", header->len);
 
+		packet_num++;
+
+		printf("Packet number: %d  Packet Len: %d\n\n",packet_num, header->len);
+
+		ethernet_parser(packet);
+		packet = packet + 14; // ethernet header is 14 bytes long, advance pointer
+		arp_parser(packet);
 	}
 
 	int main(int argc, char *argv[]) {
