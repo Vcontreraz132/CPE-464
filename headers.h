@@ -1,4 +1,4 @@
-#indef HEADERS_H
+#ifndef HEADERS_H
 #define HEADERS_H
 #include <stdint.h>
 
@@ -25,4 +25,52 @@ struct arp_header {
 	uint8_t dest_ip[IP_addr_len];
 }__attributes__((packed));
 
+// IP header struct
+struct IP_header {
+	uint8_t version_IHL;
+	uint8_t TOS;
+	uint16_t total_len;
+	uint16_t ident;
+	uint16_t flag_offset;
+	uint8_t ttl;
+	uint8_t protocol;
+	uint16_t checksum;
+	uint8_t src_addr[IP_addr_len];
+	uint8_t dest_addr[IP_addr_len];
+}__attributes__((packed));
 
+// ICMP header struct
+struct ICMP_header {
+	uint8_t type;
+	uint8_t code;
+	uint16_t checksum;
+	uint16_t identifier;
+	uint16_t sequence_num;
+}__attributes__((packed));
+
+// TCP header struct
+struct TCP_header {
+	uint16_t src_port;
+	uint16_t dest_port;
+	uint32_t sequence_num;
+	uint32_t ack_num;
+	uint8_t data_offset;
+	uint8_t flags;
+	uint16_t window_size;
+	uint16_t checksum;
+	uint16_t pointer;
+}__attributes__((packed));
+
+// UDP header struct
+struct UDP_header {
+	uint16_t src_port;
+	uint16_t dest_port;
+	uint16_t length;
+	uint16_t checksum;
+}__attributes__((packed));
+
+
+
+
+
+#endif
