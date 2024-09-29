@@ -2,6 +2,9 @@
 #define TRACE_H
 #include <stdint.h>
 #include <arpa/inet.h>
+#include "checksum.h"
+#include <string.h>
+//#include <checksum.c>
 
 #define LAN_addr_len 6 //define ethernet address size of 6 bytes
 #define IP_addr_len 4 //define IP address size of 4 bytes
@@ -121,8 +124,20 @@ static void ip_parser(const u_char *packet) {
 			break;
 	}
 	// checksum
+	printf("\t\tChecksum: ");
 	
-	printf("\n\n");
+	uint8_t ip_headlen = (ip->version_IHL & 0x0F) * 4;
+	uint8_t buff[ip_headlen];
+	memcpy(buff, packet, ip_headlen);
+	uint16_t chksum = ntohs(ip->checksum);
+	uint16_t calc_checksum = in_cksum((unsigned short *)buff, ip_headlen);
+	if(calc_checksum == 0) {
+		printf("Correct (0x%x)\n", chksum);
+	}
+	else {
+		printf("Incorrect (0x%x)\n", chksum);
+	}
+
 	printf("\t\tSender IP: ");
 	print_ip_addr(ip->src_addr);
 	printf("\t\tDest IP: ");
