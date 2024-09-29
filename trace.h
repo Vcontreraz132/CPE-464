@@ -97,6 +97,39 @@ struct IP_header {
 	uint8_t dest_addr[IP_addr_len];
 }__attribute__((packed));
 
+static void ip_parser(const u_char *packet) {
+	struct IP_header *ip = (struct IP_header *)packet;
+	printf("\tIP Header\n");
+	printf("\t\tTOS: %x\n", ip->TOS);
+	printf("\t\tTTL: %d\n", ip->ttl);
+	// protocol
+	printf("\t\tProtocol: ");
+	switch(ip->protocol) {
+		case 0x01:
+			printf("ICMP\n");
+			break;
+		case 0x02:
+			printf("IGMP\n");
+			break;
+		case 0x06: printf("TCP\n");
+			break;
+		case 0x11:
+			printf("UDP\n");
+			break;
+		default:
+			printf("Uknown Protocol\n");
+			break;
+	}
+	// checksum
+	
+	printf("\n\n");
+	printf("\t\tSender IP: ");
+	print_ip_addr(ip->src_addr);
+	printf("\t\tDest IP: ");
+	print_ip_addr(ip->dest_addr);
+	printf("\n");
+}
+
 // ICMP header struct
 struct ICMP_header {
 	uint8_t type;
