@@ -23,6 +23,23 @@
 				struct IP_header *ip_head = (struct IP_header *)packet;
 				uint8_t ip_head_len = (ip_head->version_IHL & 0x0F) * 4; // calc IP header length by masking verison and IHL field
 				packet = packet + ip_head_len; // advance packet pointer
+
+				switch(ip_head->protocol) {
+					case 0x01:
+						icmp_parser(packet);
+						break;
+					case 0x02:
+						tcp_parser(packet);
+						break;
+					case 0x06:
+						tcp_parser(packet);
+						break;
+					case 0x11:
+						udp_parser(packet);
+						break;
+					default:
+						break;
+				}
 				break;
 			case 0x0806:
 				arp_parser(packet);
