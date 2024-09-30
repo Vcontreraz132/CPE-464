@@ -103,9 +103,11 @@ struct IP_header {
 static void ip_parser(const u_char *packet) {
 	struct IP_header *ip = (struct IP_header *)packet;
 	printf("\tIP Header\n");
-	printf("\t\tTOS: %x\n", ip->TOS);
+	
+	printf("\t\tTOS: 0x%x\n", ip->TOS);
+	
 	printf("\t\tTTL: %d\n", ip->ttl);
-	// protocol
+	
 	printf("\t\tProtocol: ");
 	switch(ip->protocol) {
 		case 0x01:
@@ -114,16 +116,17 @@ static void ip_parser(const u_char *packet) {
 		case 0x02:
 			printf("IGMP\n");
 			break;
-		case 0x06: printf("TCP\n");
+		case 0x06:
+			printf("TCP\n");
 			break;
 		case 0x11:
 			printf("UDP\n");
 			break;
 		default:
-			printf("Uknown Protocol\n");
+			printf("Unknown\n");
 			break;
 	}
-	// checksum
+
 	printf("\t\tChecksum: ");
 	
 	uint8_t ip_headlen = (ip->version_IHL & 0x0F) * 4;
@@ -131,15 +134,12 @@ static void ip_parser(const u_char *packet) {
 	memcpy(buff, packet, ip_headlen);
 	uint16_t chksum = ntohs(ip->checksum);
 	uint16_t calc_checksum = in_cksum((unsigned short *)buff, ip_headlen);
-	if(calc_checksum == 0) {
-		printf("Correct (0x%x)\n", chksum);
-	}
-	else {
-		printf("Incorrect (0x%x)\n", chksum);
-	}
+
+	(calc_checksum == 0) ? printf("Correct (0x%x)\n", chksum) : printf("Incorrect (0x%x)\n", chksum);
 
 	printf("\t\tSender IP: ");
 	print_ip_addr(ip->src_addr);
+	
 	printf("\t\tDest IP: ");
 	print_ip_addr(ip->dest_addr);
 	printf("\n");
@@ -154,6 +154,24 @@ struct ICMP_header {
 	uint16_t sequence_num;
 }__attribute__((packed));
 
+static void icmp_parser(const u_char *packet) {
+	struct ICMP_header *icmp = (struct ICMP_header *)packet;
+	printf("\tICMP Header\n");
+	printf("\t\tType: ");
+	switch(icmp->type) {
+		case 0x0:
+			printf("Reply\n");
+			break;
+		case 0x08:
+			printf("Request\n");
+			break;
+		default:
+			printf("Unknown\n");
+			break;
+	}
+	printf("\n");
+}
+
 // TCP header struct
 struct TCP_header {
 	uint16_t src_port;
@@ -167,6 +185,59 @@ struct TCP_header {
 	uint16_t pointer;
 }__attribute__((packed));
 
+static void port_printer(uint16_t port) {
+	switch(port) {
+		case 80:
+			printf("HTTP\n");
+			break;
+		case 23:
+			printf("Telnet\n");
+			break;
+		case 20:
+			printf("FTP\n");
+			break;
+		case 21:
+			printf("FTP\n");
+			break;
+		case 110:
+			printf("Pop3\n");
+			break;
+		case 25:
+			printf("SMTP\n");
+			break;
+		default:
+			printf("%d\n", port);
+			break;
+	}
+}
+
+static void tcp_parser(const u_char *packet) {
+	struct TCP_header *tcp = (struct TCP_header *)packet;
+	printf("\tTCP Header\n");
+	printf("\t\tSource Port: ");
+	port_printer(tcp->src_port);
+	printf("\t\tDestination Port: ");
+	port_printer(tcp->dest_port);
+	printf("\t\tSequence number: %u\n", ntohs(tcp->sequence_num));
+	printf("\t\tAck Number: %u\n", ntohs(tcp->ack_num));
+	printf("\t\tSYN flag: ");
+	(tcp->flags == 0x02) ? printf("Yes\n") : printf("No\n");
+	printf("\t\tReset flag: ");
+	(tcp->flags == 0x04) ? printf("Yes\n") : printf("No\n");
+	printf("\t\tFIN flag: ");
+	(tcp->flags == 0x01) ? printf("Yes\n") : printf("No\n");
+	printf("\t\tWindow Size: %u", ntohs(tcp->window_size));
+	printf("\t\tChecksum: ");
+	/*
+	uint8_t TCP_headlen = (tcp->version_IHL & 0x0F) * 4;
+	uint8_t buff[ip_headlen];
+	memcpy(buff, packet, ip_headlen);
+	uint16_t chksum = ntohs(ip->checksum);
+	uint16_t calc_checksum = in_cksum((unsigned short *)buff, ip_headlen);
+	(calc_checksum == 0) ? printf("Correct (0x%x)\n", chksum) : printf("Incorrect (0x%x)\n", chksum);
+	*/
+}
+
 // UDP header struct
 struct UDP_header {
 	uint16_t src_port;
@@ -175,8 +246,14 @@ struct UDP_header {
 	uint16_t checksum;
 }__attribute__((packed));
 
-
-
-
+static void udp_parser(const u_char *packet) {
+	struct UDP_header *udp = (struct UDP_header *)packet;
+	printf("\tUDP Header\n");
+	printf("\t\tSource Port: ");
+	port_printer(udp->src_port);
+	printf("\t\tDestination Port ");
+	port_printer(udp->dest_port);
+	printf("\n");
+}
 
 #endif
