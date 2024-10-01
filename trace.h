@@ -56,7 +56,7 @@ struct arp_header {
 }__attribute__((packed));
 
 static void print_ip_addr(uint8_t *ip) {
-	printf("%u.%u.%u.%u\n", ip[0], ip[1], ip[2], ip[3]);
+	printf("%u.%u.%u.%u", ip[0], ip[1], ip[2], ip[3]);
 }
 
 static void arp_parser(const u_char *packet) {
@@ -78,6 +78,7 @@ static void arp_parser(const u_char *packet) {
 	print_mac_addr(arp->src_mac);
 	printf("\t\tSender IP: ");
 	print_ip_addr(arp->src_ip);
+	printf("\n");
 	printf("\t\tTarget MAC: ");
 	print_mac_addr(arp->dest_mac);
 	printf("\t\tTarget IP: ");
@@ -102,6 +103,7 @@ struct IP_header {
 
 static void ip_parser(const u_char *packet) {
 	struct IP_header *ip = (struct IP_header *)packet;
+	int unknown_protocol = 0;
 	printf("\tIP Header\n");
 	
 	printf("\t\tTOS: 0x%x\n", ip->TOS);
@@ -124,6 +126,7 @@ static void ip_parser(const u_char *packet) {
 			break;
 		default:
 			printf("Unknown\n");
+			unknown_protocol = 1;
 			break;
 	}
 
@@ -139,10 +142,13 @@ static void ip_parser(const u_char *packet) {
 
 	printf("\t\tSender IP: ");
 	print_ip_addr(ip->src_addr);
+	printf("\n");
 	
 	printf("\t\tDest IP: ");
 	print_ip_addr(ip->dest_addr);
-	printf("\n");
+	if(!unknown_protocol) {
+		printf("\n");
+	}
 }
 
 // ICMP header struct
@@ -169,7 +175,7 @@ static void icmp_parser(const u_char *packet) {
 			printf("Unknown\n");
 			break;
 	}
-	printf("\n");
+	//printf("\n");
 }
 
 // TCP header struct
