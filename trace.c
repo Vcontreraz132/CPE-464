@@ -2,12 +2,21 @@
 #include <stdlib.h>
 #include "trace.h"
 #include <pcap.h>
+#include "smartalloc.h"
 
 	int packet_num = 0;
 
-	void packet_parser(u_char *pack_total, const struct pcap_pkthdr *header, const u_char *packet) {
+	typedef struct {
+		u_char *packet_buffer;
+		int pack_total;
+	} parser_data;
 
-		int packet_total = *((int *)pack_total);
+	void packet_parser(u_char *user_data, const struct pcap_pkthdr *header, const u_char *packet) {
+
+		parser_data *data = (parser_data *)user_data;
+
+		memcpy(data->packet_buffer, packet, header->len);
+		int packet_total = data->pack_total;
 					
 		packet_num++;
 		
@@ -21,6 +30,9 @@
 		switch(ntohs(enet->enet_type)) {
 			case 0x0800:
 				ip_parser(packet);
+				
+				const u_char *ip_packet = packet;
+
 				struct IP_header *ip_head = (struct IP_header *)packet;
 				uint8_t ip_head_len = (ip_head->version_IHL & 0x0F) * 4; // calc IP header length by masking verison and IHL field
 				packet = packet + ip_head_len; // advance packet pointer
@@ -33,14 +45,14 @@
 					case 0x01:
 						icmp_parser(packet);
 						break;
-					case 0x02:
-						tcp_parser(packet);
-						break;
+					// case 0x02:
+					// 	tcp_parser(packet, ip_packet);
+					// 	break;
 					case 0x06:
-						tcp_parser(packet);
+						tcp_parser(packet, ip_packet);
 						break;
 					case 0x11:
-						udp_parser(packet);
+						udp_parser(packet, ip_packet);
 						break;
 					default:
 						break;
@@ -94,15 +106,23 @@
 			return 1;
 		}
 
-		int pack_total = packet_counter(handle);
+		u_char *packet_buffer = (u_char *)malloc(1500 * sizeof(u_char));
+		if(packet_buffer == NULL) {
+			fprintf(stderr, "Unable to allocate memory\n");
+			pcap_close(handle);
+			return 1;
+		}
+
+		parser_data data;
+		data.packet_buffer = packet_buffer;
+		data.pack_total = packet_counter(handle);
 		
 		pcap_close(handle);
-	//	printf("Total Packets: %d\n", pack_total);
 		handle = pcap_open_offline(argv[1], errbuf);
 
 		// instead of pcap_next_ex, use pcap_loop to read all packets
 		printf("\n");
-		int loop_return = pcap_loop(handle, -1, packet_parser, (u_char *)&pack_total);
+		int loop_return = pcap_loop(handle, -1, packet_parser, (u_char *)&data);
 
 
 		if(loop_return == -1) {
@@ -111,6 +131,7 @@
 			return 1;
 		}
 
+		free(packet_buffer);
 		pcap_close(handle);
 
 		return 0;
