@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <arpa/inet.h>
 #include "checksum.h"
+#include "smartalloc.h"
+#include <stdio.h>
 #include <string.h>
 //#include <checksum.c>
 
@@ -131,14 +133,13 @@ static void ip_parser(const u_char *packet) {
 	}
 
 	printf("\t\tChecksum: ");
-	
 	uint8_t ip_headlen = (ip->version_IHL & 0x0F) * 4;
-	uint8_t buff[ip_headlen];
+	uint8_t *buff = (uint8_t *)malloc(ip_headlen * sizeof(uint8_t));
 	memcpy(buff, packet, ip_headlen);
 	uint16_t chksum = ntohs(ip->checksum);
 	uint16_t calc_checksum = in_cksum((unsigned short *)buff, ip_headlen);
-
 	(calc_checksum == 0) ? printf("Correct (0x%x)\n", chksum) : printf("Incorrect (0x%x)\n", chksum);
+	free(buff);
 
 	printf("\t\tSender IP: ");
 	print_ip_addr(ip->src_addr);
@@ -191,6 +192,25 @@ struct TCP_header {
 	uint16_t pointer;
 }__attribute__((packed));
 
+struct pseudo_IP {
+	uint8_t src_ip[4];
+	uint8_t dest_ip[4];
+	uint8_t fixed;
+	uint8_t protocol;
+	uint16_t tcp_len;
+}__attribute__((packed));
+
+static void pseudo_builder(struct pseudo_IP *pseudo, const u_char *ip_packet, uint16_t length, uint8_t protocol) {
+	struct IP_header *ip = (struct IP_header *)ip_packet;
+	
+	memcpy(pseudo->src_ip, ip->src_addr, 4);
+	memcpy(pseudo->dest_ip, ip->dest_addr, 4);
+	pseudo->fixed = 0;
+	pseudo->protocol = protocol;
+	pseudo->tcp_len = htons(length);
+
+}
+
 static void port_printer(uint16_t port) {
 	switch(port) {
 		case 80:
@@ -217,15 +237,16 @@ static void port_printer(uint16_t port) {
 	}
 }
 
-static void tcp_parser(const u_char *packet) {
+static void tcp_parser(const u_char *packet, const u_char *ip_packet) {
 	struct TCP_header *tcp = (struct TCP_header *)packet;
+
 	printf("\tTCP Header\n");
 	printf("\t\tSource Port: ");
-	port_printer(tcp->src_port);
+	port_printer(ntohs(tcp->src_port));
 	printf("\t\tDestination Port: ");
-	port_printer(tcp->dest_port);
-	printf("\t\tSequence number: %u\n", ntohs(tcp->sequence_num));
-	printf("\t\tAck Number: %u\n", ntohs(tcp->ack_num));
+	port_printer(ntohs(tcp->dest_port));
+	printf("\t\tSequence number: %u\n", ntohl(tcp->sequence_num));
+	printf("\t\tAck Number: %u\n", ntohl(tcp->ack_num));
 	printf("\t\tSYN flag: ");
 	(tcp->flags == 0x02) ? printf("Yes\n") : printf("No\n");
 	printf("\t\tReset flag: ");
@@ -234,14 +255,23 @@ static void tcp_parser(const u_char *packet) {
 	(tcp->flags == 0x01) ? printf("Yes\n") : printf("No\n");
 	printf("\t\tWindow Size: %u", ntohs(tcp->window_size));
 	printf("\t\tChecksum: ");
-	/*
-	uint8_t TCP_headlen = (tcp->version_IHL & 0x0F) * 4;
-	uint8_t buff[ip_headlen];
-	memcpy(buff, packet, ip_headlen);
-	uint16_t chksum = ntohs(ip->checksum);
-	uint16_t calc_checksum = in_cksum((unsigned short *)buff, ip_headlen);
-	(calc_checksum == 0) ? printf("Correct (0x%x)\n", chksum) : printf("Incorrect (0x%x)\n", chksum);
-	*/
+
+	//struct IP_header *ip = (struct IP_header *)ip_packet;
+	uint16_t tcp_length = ntohs(((struct IP_header *)ip_packet)->total_len) - (((struct IP_header *)ip_packet)->version_IHL & 0x0F) * 4;
+
+	struct pseudo_IP pseudo;
+	pseudo_builder(&pseudo, ip_packet, tcp_length, 6);
+
+	uint8_t *buffer = (uint8_t *)malloc(sizeof(struct pseudo_IP) + tcp_length);
+
+	memcpy(buffer, &pseudo, sizeof(struct pseudo_IP));
+	memcpy(buffer + sizeof(struct pseudo_IP), packet, tcp_length);
+
+	uint16_t checksum_calc = in_cksum((unsigned short *)buffer, sizeof(struct pseudo_IP) + tcp_length);
+	uint16_t chksum = ntohs(tcp->checksum);
+	(checksum_calc == 0) ? printf("Correct (0x%x)\n", chksum) : printf("Incorrect (0x%x)\n", chksum);
+
+	free(buffer);
 }
 
 // UDP header struct
@@ -252,14 +282,27 @@ struct UDP_header {
 	uint16_t checksum;
 }__attribute__((packed));
 
-static void udp_parser(const u_char *packet) {
+static void udp_parser(const u_char *packet, const u_char *ip_packet) {
 	struct UDP_header *udp = (struct UDP_header *)packet;
 	printf("\tUDP Header\n");
 	printf("\t\tSource Port: ");
 	port_printer(udp->src_port);
 	printf("\t\tDestination Port ");
 	port_printer(udp->dest_port);
-	printf("\n");
+
+	uint16_t udp_length = ntohs(udp->length);
+
+	struct pseudo_IP pseudo;
+	pseudo_builder(&pseudo, ip_packet, udp_length, 17);
+	uint8_t *buffer = (uint8_t *)malloc(sizeof(struct pseudo_IP) + udp_length);
+
+	memcpy(buffer, &pseudo, sizeof(struct pseudo_IP));
+	memcpy(buffer + sizeof(struct pseudo_IP), packet, udp_length);
+
+	uint16_t checksum_calc = in_cksum((unsigned short *)buffer, sizeof(struct pseudo_IP) + udp_length);
+	uint16_t chksum = ntohs(udp->checksum);
+	(checksum_calc == 0) ? printf("Correct (0x%x)\n", chksum) : printf("Incorrect (0x%x)\n", chksum);
+	free(buffer);
 }
 
 #endif
